@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-new {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-new:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-undo {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-undo:hover {
+            background: #e0e0e0;
+        }
+
+        .game-board {
+            background: #bbada0;
+            border-radius: 10px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            aspect-ratio: 1;
+        }
+
+        .tile {
+            background: #cdc1b4;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 35px;
+            font-weight: bold;
+            color: #776e65;
+            transition: all 0.15s ease-in-out;
+            cursor: default;
+            user-select: none;
+        }
+
+        .tile.empty {
+            background: #bbada0;
+            color: transparent;
+        }
+
+        /* Tile colors based on values */
+        .tile[data-value="2"] {
+            background: #eee4da;
+            color: #776e65;
+        }
+
+        .tile[data-value="4"] {
+            background: #ede0c8;
+            color: #776e65;
+        }
+
+        .tile[data-value="8"] {
+            background: #f2b179;
+            color: #f9f6f2;
+        }
+
+        .tile[data-value="16"] {
+            background: #f59563;
+            color: #f9f6f2;
+        }
+
+        .tile[data-value="32"] {
+            background: #f67c5f;
+            color: #f9f6f2;
+        }
+
+        .tile[data-value="64"] {
+            background: #f65e3b;
+            color: #f9f6f2;
+        }
+
+        .tile[data-value="128"] {
+            background: #edcf72;
+            color: #f9f6f2;
+            font-size: 30px;
+        }
+
+        .tile[data-value="256"] {
+            background: #edcc61;
+            color: #f9f6f2;
+            font-size: 30px;
+        }
+
+        .tile[data-value="512"] {
+            background: #edc850;
+            color: #f9f6f2;
+            font-size: 30px;
+        }
+
+        .tile[data-value="1024"] {
+            background: #edc53f;
+            color: #f9f6f2;
+            font-size: 25px;
+        }
+
+        .tile[data-value="2048"] {
+            background: #edc22e;
+            color: #f9f6f2;
+            font-size: 25px;
+            box-shadow: 0 0 20px rgba(243, 215, 116, 0.5);
+        }
+
+        .tile.new {
+            animation: pop 0.3s ease-in-out;
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0.8);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .info {
+            background: #f5f5f5;
+            border-radius: 5px;
+            padding: 15px;
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .info h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .info ul {
+            margin-left: 20px;
+        }
+
+        .info li {
+            margin-bottom: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-content p {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .modal-content button {
+            font-size: 16px;
+            padding: 12px 30px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            .title {
+                font-size: 28px;
+            }
+
+            .tile {
+                font-size: 28px;
+            }
+
+            .tile[data-value="128"],
+            .tile[data-value="256"],
+            .tile[data-value="512"] {
+                font-size: 24px;
+            }
+
+            .tile[data-value="1024"],
+            .tile[data-value="2048"] {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">2048</div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Best</div>
+                    <div class="stat-value" id="best">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-new" id="newGameBtn">New Game</button>
+            <button class="btn-undo" id="undoBtn">Undo</button>
+        </div>
+
+        <div class="game-board" id="gameBoard">
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+            <div class="tile empty"></div>
+        </div>
+
+        <div class="info">
+            <h3>How to Play:</h3>
+            <ul>
+                <li><strong>Swipe</strong> or use <strong>Arrow Keys</strong> to move tiles</li>
+                <li>Combine tiles with the <strong>same number</strong> to create larger numbers</li>
+                <li>Reach the <strong>2048 tile</strong> to win!</li>
+                <li>The game ends when no more moves are possible</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div class="modal" id="gameOverModal">
+        <div class="modal-content">
+            <h2 id="gameOverTitle">Game Over!</h2>
+            <p>Your Score: <strong id="gameOverScore">0</strong></p>
+            <button class="btn-new" onclick="location.reload()">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Win Modal -->
+    <div class="modal" id="winModal">
+        <div class="modal-content">
+            <h2>🎉 You Won! 🎉</h2>
+            <p>You reached the 2048 tile!</p>
+            <p>Your Score: <strong id="winScore">0</strong></p>
+            <button class="btn-new" onclick="location.reload()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game logic will go here
+        // This is a placeholder for the JavaScript game implementation
+        console.log('2048 Game Loaded');
+        
+        // Initialize game
+        document.getElementById('newGameBtn').addEventListener('click', function() {
+            console.log('New Game Started');
+        });
+
+        document.getElementById('undoBtn').addEventListener('click', function() {
+            console.log('Undo action');
+        });
+    </script>
+</body>
+</html>

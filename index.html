@@ -2,21 +2,251 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2048 Game</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2048 Polished</title>
+    <style>
+        :root {
+            --bg-color: #faf8ef;
+            --grid-bg: #bbada0;
+            --cell-bg: rgba(238, 228, 218, 0.35);
+            --text-dark: #776e65;
+            --text-light: #f9f6f2;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            touch-action: none; /* Prevents scrolling while playing */
+        }
+
+        .container { width: 340px; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        h1 { font-size: 60px; font-weight: bold; color: var(--text-dark); margin: 0; }
+
+        .scores { display: flex; gap: 5px; }
+        .score-box {
+            background: var(--grid-bg);
+            padding: 5px 15px;
+            border-radius: 3px;
+            color: white;
+            text-align: center;
+            min-width: 60px;
+        }
+        .score-label { font-size: 10px; text-transform: uppercase; display: block; }
+        .score-value { font-size: 18px; font-weight: bold; }
+
+        .grid {
+            width: 340px;
+            height: 340px;
+            background: var(--grid-bg);
+            border-radius: 6px;
+            position: relative;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .tile {
+            width: 70px;
+            height: 70px;
+            background: var(--cell-bg);
+            border-radius: 3px;
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: bold;
+            transition: transform 100ms ease-in-out, background 100ms;
+            z-index: 1;
+        }
+
+        /* Tile Colors */
+        .tile-2 { background: #eee4da; color: var(--text-dark); }
+        .tile-4 { background: #ede0c8; color: var(--text-dark); }
+        .tile-8 { background: #f2b179; color: var(--text-light); }
+        .tile-16 { background: #f59563; color: var(--text-light); }
+        .tile-32 { background: #f67c5f; color: var(--text-light); }
+        .tile-64 { background: #f65e3b; color: var(--text-light); }
+        .tile-128 { background: #edcf72; color: var(--text-light); font-size: 24px; }
+        .tile-256 { background: #edcc61; color: var(--text-light); font-size: 24px; }
+        .tile-512 { background: #edc850; color: var(--text-light); font-size: 24px; }
+        .tile-1024 { background: #edc53f; color: var(--text-light); font-size: 18px; }
+        .tile-2048 { background: #edc22e; color: var(--text-light); font-size: 18px; }
+
+        .new-tile { animation: appear 200ms ease-out; }
+        @keyframes appear { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+
+        .controls { margin-top: 20px; width: 100%; display: flex; justify-content: space-between; }
+        button {
+            background: #8f7a66;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
+
     <div class="container">
-        <h1>2048</h1>
-        <div class="info">
-            <div>
-                <p>Score: <span id="score">0</span></p>
+        <header>
+            <h1>2048</h1>
+            <div class="scores">
+                <div class="score-box"><span class="score-label">Score</span><div id="score" class="score-value">0</div></div>
+                <div class="score-box"><span class="score-label">Best</span><div id="best" class="score-value">0</div></div>
             </div>
-            <button id="newGame">New Game</button>
+        </header>
+
+        <div class="grid" id="grid-container">
+            <script>
+                for(let i=0; i<16; i++) document.write('<div class="tile" style="position:static; display:inline-flex; margin:5px;"></div>');
+            </script>
         </div>
-        <div class="game-board" id="gameBoard"></div>
+
+        <div class="controls">
+            <p>Join the numbers to get to 2048!</p>
+            <button onclick="game.reset()">New Game</button>
+        </div>
     </div>
-    <script src="game.js"></script>
+
+    <script>
+        class Game2048 {
+            constructor() {
+                this.gridContainer = document.getElementById('grid-container');
+                this.scoreDisplay = document.getElementById('score');
+                this.bestDisplay = document.getElementById('best');
+                this.size = 4;
+                this.bestScore = localStorage.getItem('bestScore') || 0;
+                this.bestDisplay.innerText = this.bestScore;
+                this.reset();
+                this.setupInputs();
+            }
+
+            reset() {
+                this.grid = Array(this.size * this.size).fill(0);
+                this.score = 0;
+                this.updateScore(0);
+                this.render();
+                this.addTile();
+                this.addTile();
+            }
+
+            addTile() {
+                const emptyCells = this.grid.map((val, idx) => val === 0 ? idx : null).filter(val => val !== null);
+                if (emptyCells.length > 0) {
+                    const randomIdx = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    this.grid[randomIdx] = Math.random() < 0.9 ? 2 : 4;
+                    this.render();
+                }
+            }
+
+            render() {
+                this.gridContainer.querySelectorAll('.actual-tile').forEach(t => t.remove());
+                this.grid.forEach((value, idx) => {
+                    if (value !== 0) {
+                        const tile = document.createElement('div');
+                        const x = idx % this.size;
+                        const y = Math.floor(idx / this.size);
+                        tile.className = `tile actual-tile tile-${value} new-tile`;
+                        tile.textContent = value;
+                        tile.style.left = `${x * 80 + 10}px`;
+                        tile.style.top = `${y * 80 + 10}px`;
+                        this.gridContainer.appendChild(tile);
+                    }
+                });
+            }
+
+            move(direction) {
+                let hasChanged = false;
+                const getRow = (i) => [this.grid[i*4], this.grid[i*4+1], this.grid[i*4+2], this.grid[i*4+3]];
+                const getCol = (i) => [this.grid[i], this.grid[i+4], this.grid[i+8], this.grid[i+12]];
+                
+                for (let i = 0; i < 4; i++) {
+                    let line = (direction === 'left' || direction === 'right') ? getRow(i) : getCol(i);
+                    if (direction === 'right' || direction === 'down') line.reverse();
+                    
+                    let newLine = line.filter(v => v !== 0);
+                    for (let j = 0; j < newLine.length - 1; j++) {
+                        if (newLine[j] === newLine[j+1]) {
+                            newLine[j] *= 2;
+                            this.updateScore(newLine[j]);
+                            newLine.splice(j+1, 1);
+                            hasChanged = true;
+                        }
+                    }
+                    while (newLine.length < 4) newLine.push(0);
+                    if (direction === 'right' || direction === 'down') newLine.reverse();
+
+                    // Update grid
+                    for (let j = 0; j < 4; j++) {
+                        let idx = (direction === 'left' || direction === 'right') ? (i*4 + j) : (j*4 + i);
+                        if (this.grid[idx] !== newLine[j]) hasChanged = true;
+                        this.grid[idx] = newLine[j];
+                    }
+                }
+
+                if (hasChanged) {
+                    this.addTile();
+                    if (this.isGameOver()) alert("Game Over!");
+                }
+            }
+
+            updateScore(points) {
+                this.score += points;
+                this.scoreDisplay.innerText = this.score;
+                if (this.score > this.bestScore) {
+                    this.bestScore = this.score;
+                    this.bestDisplay.innerText = this.bestScore;
+                    localStorage.setItem('bestScore', this.bestScore);
+                }
+            }
+
+            isGameOver() {
+                if (this.grid.includes(0)) return false;
+                for (let i = 0; i < 16; i++) {
+                    if (i % 4 < 3 && this.grid[i] === this.grid[i+1]) return false;
+                    if (i < 12 && this.grid[i] === this.grid[i+4]) return false;
+                }
+                return true;
+            }
+
+            setupInputs() {
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === "ArrowLeft") this.move('left');
+                    if (e.key === "ArrowRight") this.move('right');
+                    if (e.key === "ArrowUp") this.move('up');
+                    if (e.key === "ArrowDown") this.move('down');
+                });
+
+                let touchStart = null;
+                window.addEventListener('touchstart', e => touchStart = e.touches[0]);
+                window.addEventListener('touchend', e => {
+                    if (!touchStart) return;
+                    let dx = e.changedTouches[0].screenX - touchStart.screenX;
+                    let dy = e.changedTouches[0].screenY - touchStart.screenY;
+                    if (Math.abs(dx) > Math.abs(dy)) this.move(dx > 0 ? 'right' : 'left');
+                    else this.move(dy > 0 ? 'down' : 'up');
+                });
+            }
+        }
+
+        const game = new Game2048();
+    </script>
 </body>
 </html>
